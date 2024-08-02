@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:audio_player/audio_player.dart';
 
 void main() {
   runApp(const MyApp());
@@ -37,7 +38,7 @@ class MyApp extends StatelessWidget {
 }
 
 class AudioWidget extends StatefulWidget {
-  const AudioWidget({super.key,required this.title});
+  const AudioWidget({super.key, required this.title});
 
   final String title;
   @override
@@ -48,13 +49,27 @@ class _AudioWidgetState extends State<AudioWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title),),
+      appBar: AppBar(
+        title: Text(widget.title),
+      ),
       body: Center(
-
         child: Container(
-          width: 500,
-          height: 300,
-          color: Colors.blue),
+          constraints: BoxConstraints.loose(Size.fromWidth(150)),
+          // width: 1000,
+          // height: 250,
+          child: const AudioPlayerView(
+              iconSize: 48,
+              title: Tooltip(
+                message: "Alan Walker ft Selena Gomez - Keep me safe",
+                child: Text(
+                  "Alan Walker ft Selena Gomez - Keep me safe",
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              // titleTheme: TextStyle(color: Colors.black),
+              inactiveColor: Colors.white38,
+              url: "http://localhost:8000/Alan%20Walker_dnt.mp3"),
+        ),
       ),
     );
   }
