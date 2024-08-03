@@ -11,6 +11,7 @@ class AudioPlayerView extends StatefulWidget {
     this.title,
     this.titleTheme,
     this.iconSize,
+    this.timeStyle,
   });
 
   final String url;
@@ -21,12 +22,13 @@ class AudioPlayerView extends StatefulWidget {
   final Widget? title;
   final TextStyle? titleTheme;
   final double? iconSize;
+  final TextStyle? timeStyle;
   @override
   State<AudioPlayerView> createState() => _AudioPlayerViewState();
 }
 
 class _AudioPlayerViewState extends State<AudioPlayerView> {
-  AudioPlayer audioPlayer = AudioPlayer();
+  late AudioHandler audioPlayer;
   late Duration? duration = Duration.zero;
   late double progress;
 
@@ -45,12 +47,20 @@ class _AudioPlayerViewState extends State<AudioPlayerView> {
         });
       }
     });
-    audioPlayer.positionStream.listen(updateProgressFromAudio);
-    audioPlayer.playingStream.listen(updatePlaying);
+
     super.initState();
   }
 
   Future<Duration?> init() async {
+    audioPlayer = await AudioService.init<AudioHandler>(
+      builder: () => AudioHandler(),
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.aujourdhuilavenir.channel.audio',
+        androidNotificationChannelName: 'Music playback',
+      ),
+    );
+    audioPlayer.positionStream.listen(updateProgressFromAudio);
+    audioPlayer.playingStream.listen(updatePlaying);
     return duration = await audioPlayer.setUrl(widget.url);
   }
 
@@ -106,100 +116,95 @@ class _AudioPlayerViewState extends State<AudioPlayerView> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        color: Theme.of(context).colorScheme.primaryContainer,
-      ),
-      padding: const EdgeInsets.all(30),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: Container(
-              constraints: BoxConstraints.loose(const Size.fromHeight(100)),
-              child: Row(
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Container(
-                  //   margin: EdgeInsets.only(
-                  //       bottom:
-                  //           (widget.iconSize != null) ? widget.iconSize! : 48),
-                  //   child:
-                  Align(
-                    alignment: const Alignment(0, -1),
-                    child: AnimatedPlayPause(
-                      color: widget.buttonColor,
-                      size: widget.iconSize,
-                      isPlayingStream: audioPlayer.playingStream,
-                      onTap: _onTap,
-                      url: widget.url,
-                    ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Container(
+            constraints: BoxConstraints.loose(const Size.fromHeight(100)),
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Container(
+                //   margin: EdgeInsets.only(
+                //       bottom:
+                //           (widget.iconSize != null) ? widget.iconSize! : 48),
+                //   child:
+                Align(
+                  alignment: const Alignment(0, -1),
+                  child: AnimatedPlayPause(
+                    color: widget.buttonColor,
+                    size: widget.iconSize,
+                    isPlayingStream: audioPlayer.playingStream,
+                    onTap: _onTap,
+                    url: widget.url,
                   ),
+                ),
 
-                  // ),
-                  Flexible(
-                    flex: 1,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Flexible(
-                          child: Slider.adaptive(
-                            secondaryTrackValue: audioPlayer
-                                .bufferedPosition.inMilliseconds
-                                .toDouble(),
-                            secondaryActiveColor: widget.secondaryActiveColor,
-                            inactiveColor: widget.inactiveColor,
-                            activeColor: widget.color,
-                            onChangeStart: onChangeStart,
-                            onChangeEnd: onChangeEnd,
-                            min: .0,
-                            max: upperBound,
-                            value: progress,
-                            allowedInteraction: SliderInteraction.slideOnly,
-                            onChanged: updateProgress,
+                // ),
+                Flexible(
+                  flex: 1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Flexible(
+                        child: Slider.adaptive(
+                          secondaryTrackValue: audioPlayer
+                              .bufferedPosition.inMilliseconds
+                              .toDouble(),
+                          secondaryActiveColor: widget.secondaryActiveColor,
+                          inactiveColor: widget.inactiveColor,
+                          activeColor: widget.color,
+                          onChangeStart: onChangeStart,
+                          onChangeEnd: onChangeEnd,
+                          min: .0,
+                          max: upperBound,
+                          value: progress,
+                          allowedInteraction: SliderInteraction.slideOnly,
+                          onChanged: updateProgress,
+                        ),
+                      ),
+                      Flexible(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  audioPlayer.position.toStringCompact(),
+                                  style: widget.timeStyle,
+                                ),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  duration?.toStringCompact() ?? "",
+                                  style: widget.timeStyle,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Flexible(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    audioPlayer.position.toStringCompact(),
-                                  ),
-                                ),
-                                Flexible(
-                                  child:
-                                      Text(duration?.toStringCompact() ?? ""),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          if (widget.title != null)
-            Flexible(
-              child: DefaultTextStyle(
-                child: widget.title!,
-                style: widget.titleTheme ??
-                    Theme.of(context).textTheme.labelLarge!.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onPrimaryContainer,
-                        ),
-              ),
+        ),
+        if (widget.title != null)
+          Flexible(
+            child: DefaultTextStyle(
+              style: widget.titleTheme ??
+                  Theme.of(context).textTheme.labelLarge!.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+              child: widget.title!,
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -360,4 +365,32 @@ extension on Duration {
         "$minutesPadding$minutes:"
             "$secondsPadding$seconds" /*"$microsecondsText"*/;
   }
+}
+
+class AudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
+  AudioHandler({
+    AudioPlayer? audioPlayer,
+  }) : _player = audioPlayer ?? AudioPlayer();
+  final AudioPlayer _player;
+
+  @override
+  Future<void> play() => _player.play();
+  @override
+  Future<void> pause() => _player.pause();
+  @override
+  Future<void> stop() => _player.stop();
+  @override
+  Future<void> seek(Duration position) => _player.seek(position);
+  // @override
+  // Future<void> skipToQueueItem(int i) => _player.seek(Duration.zero, index: i);
+
+  Future<Duration?> setUrl(String url) => _player.setUrl(url);
+
+  Stream<Duration> get positionStream => _player.positionStream;
+
+  Stream<bool> get playingStream => _player.playingStream;
+
+  Duration get bufferedPosition => _player.bufferedPosition;
+
+  Duration get position => _player.position;
 }
